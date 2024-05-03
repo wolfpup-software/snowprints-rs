@@ -8,7 +8,7 @@ const SEQUENCE_BIT_MASK: u64 = (1 << SEQUENCE_BIT_LEN) - 1;
 const MAX_SEQUENCES: u64 = 2 ^ SEQUENCE_BIT_LEN;
 const LOGICAL_VOLUME_BIT_LEN: u64 = 13;
 const LOGICAL_VOLUME_BIT_MASK: u64 = ((1 << LOGICAL_VOLUME_BIT_LEN) - 1) << SEQUENCE_BIT_LEN;
-const MAX_LOGICAL_VOLUMES: u64 = (2 ^ LOGICAL_VOLUME_BIT_LEN) - 1;
+const MAX_LOGICAL_VOLUMES: u64 = 2 ^ LOGICAL_VOLUME_BIT_LEN;
 const TIME_BIT_LEN: u64 = 41;
 // number of milliseconds since UTC epoch time
 const JANUARY_1ST_2024_AS_DURATION: Duration = Duration::from_millis(1704067200541);
@@ -70,6 +70,7 @@ impl Snowprint {
             self.last_logical_volume_id = self.logical_volume_id;
             self.logical_volume_id += 1;
             self.logical_volume_id %= self.logical_volume_count;
+            self.last_duration = duration_ms;
         } else {
             // time did not change!
             self.sequence_id += 1;
@@ -84,8 +85,6 @@ impl Snowprint {
                 self.sequence_id = 0;
             }
         }
-
-        self.last_duration = duration_ms;
 
         Ok(compose_snowprint(
             duration_ms as u64,
