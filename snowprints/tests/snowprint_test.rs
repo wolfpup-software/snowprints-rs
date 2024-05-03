@@ -1,5 +1,7 @@
 use snowprints::{compose_snowprint, decompose_snowprint};
 
+const JANUARY_1ST_2024_AS_MS: u64 = 1704070800;
+
 #[test]
 fn compose_and_decompose_snowprint() {
     let time = 987654321;
@@ -8,14 +10,22 @@ fn compose_and_decompose_snowprint() {
 
     let snowprint = compose_snowprint(time, logical_id, ticket_id);
 
-    let (decomposed_time, decomposed_logical_id, decomposed_ticket_id) =
-        decompose_snowprint(snowprint);
-    println!("{}", snowprint);
-    println!(
-        "{}\n{}\n{}\n",
-        decomposed_time, decomposed_logical_id, decomposed_ticket_id
-    );
-    assert_eq!(time, decomposed_time);
-    assert_eq!(logical_id, decomposed_logical_id);
-    assert_eq!(ticket_id, decomposed_ticket_id);
+    let (d_time, d_logical_id, d_ticket_id) = decompose_snowprint(snowprint);
+
+    assert_eq!(time, d_time);
+    assert_eq!(logical_id, d_logical_id);
+    assert_eq!(ticket_id, d_ticket_id);
+}
+
+#[test]
+fn compose_and_decompose_snowprint_from_a_real_date() {
+    let logical_id = 7890;
+    let ticket_id = 956;
+    let snowprint = compose_snowprint(JANUARY_1ST_2024_AS_MS, logical_id, ticket_id);
+
+    let (d_time, d_logical_id, d_ticket_id) = decompose_snowprint(snowprint);
+
+    assert_eq!(JANUARY_1ST_2024_AS_MS, d_time);
+    assert_eq!(logical_id, d_logical_id);
+    assert_eq!(ticket_id, d_ticket_id);
 }
