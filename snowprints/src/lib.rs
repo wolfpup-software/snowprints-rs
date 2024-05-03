@@ -14,10 +14,7 @@ const TIME_BITS: u64 = 41;
 
 // at it's core this is a snowprint
 pub fn compose_snowprint(ms_timestamp: u64, logical_id: u64, ticket_id: u64) -> u64 {
-    let origin =
-        ms_timestamp << (LOGICAL_SHARD_BITS + TICKET_BITS) | logical_id << TICKET_BITS | ticket_id;
-
-    origin
+    ms_timestamp << (LOGICAL_SHARD_BITS + TICKET_BITS) | logical_id << TICKET_BITS | ticket_id
 }
 
 pub fn decompose_snowprint(snowprint: u64) -> (u64, u64, u64) {
