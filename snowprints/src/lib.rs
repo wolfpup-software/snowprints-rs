@@ -3,59 +3,109 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 // https://instagram-engineering.com/sharding-ids-at-instagram-1cf5a71e5a5c
 
+const SEQUENCE_BIT_LEN: u64 = 10;
+const SEQUENCE_BIT_MASK: u64 = (1 << SEQUENCE_BIT_LEN) - 1;
+const MAX_SEQUENCES: u64 = 2 ^ SEQUENCE_BIT_LEN;
+const LOGICAL_VOLUME_BIT_LEN: u64 = 13;
+const LOGICAL_VOLUME_BIT_MASK: u64 = ((1 << LOGICAL_VOLUME_BIT_LEN) - 1) << SEQUENCE_BIT_LEN;
+const MAX_LOGICAL_VOLUMES: u64 = (2 ^ LOGICAL_VOLUME_BIT_LEN) - 1;
+const TIME_BIT_LEN: u64 = 41;
 // number of milliseconds since UTC epoch time
-const JANUARY_1ST_2024_AS_MS: u64 = 1704067200541;
-const JANUARY_1ST_2024_AS_DURATION: Duration = Duration::from_millis(JANUARY_1ST_2024_AS_MS);
+const JANUARY_1ST_2024_AS_DURATION: Duration = Duration::from_millis(1704067200541);
 
-const TICKET_BITS: u64 = 10;
-const TICKET_MAX_COUNT: u64 = 2 ^ 10;
-const DECOMPOSE_TICKET_BITS: u64 = (1 << TICKET_BITS) - 1;
-const LOGICAL_SHARD_BITS: u64 = 13;
-const LOGICAL_SHARD_MAX_COUNT: u64 = 2 ^ 13;
-const DECOMPOSE_LOGICAL_SHARD_BITS: u64 = ((1 << LOGICAL_SHARD_BITS) - 1) << TICKET_BITS;
-const TIME_BITS: u64 = 41;
+pub enum Error {
+    NoAvailableSequences,
+}
 
 pub struct Snowprint {
+    last_duration: u128,
+    last_logical_volume_id: u64,
     logical_volume_id: u64,
+    logical_volume_base: u64,
+    logical_volume_count: u64,
     sequence_id: u64,
 }
+
+// The point is to distribute ids across logical volume shards evenly
+//     - reset sequence every MS to 0 to remain sortable
+//     - increase logical volume sequence by 1 every MS
+//     - return err if available logical volume ids have been used
+
+// This assumes sequences + logical volume ids occur in the same ms
 
 impl Snowprint {
     pub fn new() -> Snowprint {
         Snowprint {
+            last_duration: 0,
+            last_logical_volume_id: 0,
             logical_volume_id: 0,
+            logical_volume_count: 8192,
+            logical_volume_base: 0,
             sequence_id: 0,
         }
     }
 
-    pub fn get_snowprint(&mut self) -> u64 {
-        let JANUARY_1ST_2024_AS_SYSTEM_TIME: SystemTime = UNIX_EPOCH + JANUARY_1ST_2024_AS_DURATION;
+    pub fn get_snowprint(&mut self) -> Result<u64, Error> {
+        let origin_timestamp: SystemTime = UNIX_EPOCH + JANUARY_1ST_2024_AS_DURATION;
 
-        let now = SystemTime::now();
-        let since = match now.duration_since(JANUARY_1ST_2024_AS_SYSTEM_TIME) {
-            Ok(duration) => duration,
-            _ => Duration::from_millis(0),
+        let duration_ms = match SystemTime::now().duration_since(origin_timestamp) {
+            // check time didn't go backward
+            Ok(duration) => {
+                let temp_duration = duration.as_millis();
+                match temp_duration > self.last_duration {
+                    true => temp_duration,
+                    _ => self.last_duration,
+                }
+            }
+            // time went backwards so use the most recent step
+            _ => self.last_duration,
         };
 
-        compose_snowprint(
-            since.as_millis() as u64,
-            self.logical_volume_id,
+        // time changed
+        if self.last_duration != duration_ms {
+            // reset sequence
+            // record last logical volume
+            // increase logical volume and rotate
+            self.sequence_id = 0;
+            self.last_logical_volume_id = self.logical_volume_id;
+            self.logical_volume_id += 1;
+            self.logical_volume_id %= self.logical_volume_count;
+        } else {
+            // time did not change!
+            self.sequence_id += 1;
+            if self.sequence_id > MAX_SEQUENCES - 1 {
+                self.logical_volume_id += 1;
+                self.logical_volume_id %= self.logical_volume_count;
+                // this occurs when we have cycled through all sequences across
+                // all logical shards
+                if self.logical_volume_id == self.last_logical_volume_id {
+                    return Err(Error::NoAvailableSequences);
+                }
+                self.sequence_id = 0;
+            }
+        }
+
+        self.last_duration = duration_ms;
+
+        Ok(compose_snowprint(
+            duration_ms as u64,
+            self.logical_volume_base + self.logical_volume_id,
             self.sequence_id,
-        )
+        ))
     }
 }
-//1714717502501
-//1716421518012
 
 // at it's core this is a snowprint
 pub fn compose_snowprint(ms_timestamp: u64, logical_id: u64, ticket_id: u64) -> u64 {
-    ms_timestamp << (LOGICAL_SHARD_BITS + TICKET_BITS) | logical_id << TICKET_BITS | ticket_id
+    ms_timestamp << (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN)
+        | logical_id << SEQUENCE_BIT_LEN
+        | ticket_id
 }
 
 pub fn decompose_snowprint(snowprint: u64) -> (u64, u64, u64) {
-    let time = snowprint >> (LOGICAL_SHARD_BITS + TICKET_BITS);
-    let logical_id = (snowprint & DECOMPOSE_LOGICAL_SHARD_BITS) >> TICKET_BITS;
-    let ticket_id = snowprint & DECOMPOSE_TICKET_BITS;
+    let time = snowprint >> (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN);
+    let logical_id = (snowprint & LOGICAL_VOLUME_BIT_MASK) >> SEQUENCE_BIT_LEN;
+    let ticket_id = snowprint & SEQUENCE_BIT_MASK;
 
     (time, logical_id, ticket_id)
 }
