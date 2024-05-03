@@ -19,7 +19,6 @@ pub enum Error {
 
 pub struct Snowprint {
     last_duration: u128,
-    last_logical_volume_id: u64,
     logical_volume_id: u64,
     logical_volume_base: u64,
     logical_volume_count: u64,
@@ -33,21 +32,29 @@ pub struct Snowprint {
 
 // This assumes sequences + logical volume ids occur in the same ms
 
+pub struct SnowprintSettings {
+    pub origin_timestamp: SystemTime,
+    pub logical_volume_count: u64,
+    pub logical_volume_base: u64,
+}
+
+pub struct SnowprintState {
+    pub last_duration_ms: u64,
+    pub sequence_id: u64,
+    pub logical_volume_id: u64,
+    pub last_logical_volume_id: u64,
+}
+
 impl Snowprint {
     pub fn new() -> Snowprint {
         Snowprint {
-            last_duration: 0,
-            last_logical_volume_id: 0,
-            logical_volume_id: 0,
-            logical_volume_count: 8192,
-            logical_volume_base: 0,
-            sequence_id: 0,
+            settings: SnowprintSettings {},
+            state: SnowprintState {},
         }
     }
 
     pub fn get_snowprint(&mut self) -> Result<u64, Error> {
         let origin_timestamp: SystemTime = UNIX_EPOCH + JANUARY_1ST_2024_AS_DURATION;
-
         let duration_ms = match SystemTime::now().duration_since(origin_timestamp) {
             // check time didn't go backward
             Ok(duration) => {
@@ -67,19 +74,17 @@ impl Snowprint {
             // record last logical volume
             // increase logical volume and rotate
             self.sequence_id = 0;
+            self.last_duration = duration_ms;
             self.last_logical_volume_id = self.logical_volume_id;
             self.logical_volume_id += 1;
             self.logical_volume_id %= self.logical_volume_count;
-            self.last_duration = duration_ms;
         } else {
             // time did not change!
             self.sequence_id += 1;
             if self.sequence_id > MAX_SEQUENCES - 1 {
                 self.logical_volume_id += 1;
                 self.logical_volume_id %= self.logical_volume_count;
-                // this occurs when we have cycled through all sequences across
-                // all logical shards
-                if self.logical_volume_id == self.last_logical_volume_id {
+                if self.last_logical_volume_id == self.logical_volume_id {
                     return Err(Error::NoAvailableSequences);
                 }
                 self.sequence_id = 0;
