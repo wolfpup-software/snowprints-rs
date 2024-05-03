@@ -18,11 +18,8 @@ pub enum Error {
 }
 
 pub struct Snowprint {
-    last_duration: u128,
-    logical_volume_id: u64,
-    logical_volume_base: u64,
-    logical_volume_count: u64,
-    sequence_id: u64,
+    settings: SnowprintSettings,
+    state: SnowprintState,
 }
 
 // The point is to distribute ids across logical volume shards evenly
@@ -33,8 +30,8 @@ pub struct Snowprint {
 // This assumes sequences + logical volume ids occur in the same ms
 
 pub struct SnowprintSettings {
-    pub origin_timestamp: SystemTime,
-    pub logical_volume_count: u64,
+    pub origin_timestamp_ms: SystemTime,
+    pub logical_volume_modulo: u64,
     pub logical_volume_base: u64,
 }
 
@@ -46,57 +43,70 @@ pub struct SnowprintState {
 }
 
 impl Snowprint {
-    pub fn new() -> Snowprint {
+    pub fn new(settings: SnowprintSettings) -> Snowprint {
         Snowprint {
-            settings: SnowprintSettings {},
-            state: SnowprintState {},
+            settings: settings,
+            state: SnowprintState {
+                last_duration_ms: 0,
+                sequence_id: 0,
+                logical_volume_id: 0,
+                last_logical_volume_id: 0,
+            },
         }
     }
 
     pub fn get_snowprint(&mut self) -> Result<u64, Error> {
-        let origin_timestamp: SystemTime = UNIX_EPOCH + JANUARY_1ST_2024_AS_DURATION;
-        let duration_ms = match SystemTime::now().duration_since(origin_timestamp) {
+        let duration_ms = match SystemTime::now().duration_since(self.settings.origin_timestamp_ms)
+        {
             // check time didn't go backward
             Ok(duration) => {
-                let temp_duration = duration.as_millis();
-                match temp_duration > self.last_duration {
+                let temp_duration = duration.as_millis() as u64;
+                match temp_duration > self.state.last_duration_ms {
                     true => temp_duration,
-                    _ => self.last_duration,
+                    _ => self.state.last_duration_ms,
                 }
             }
             // time went backwards so use the most recent step
-            _ => self.last_duration,
+            _ => self.state.last_duration_ms,
         };
 
-        // time changed
-        if self.last_duration != duration_ms {
-            // reset sequence
-            // record last logical volume
-            // increase logical volume and rotate
-            self.sequence_id = 0;
-            self.last_duration = duration_ms;
-            self.last_logical_volume_id = self.logical_volume_id;
-            self.logical_volume_id += 1;
-            self.logical_volume_id %= self.logical_volume_count;
-        } else {
-            // time did not change!
-            self.sequence_id += 1;
-            if self.sequence_id > MAX_SEQUENCES - 1 {
-                self.logical_volume_id += 1;
-                self.logical_volume_id %= self.logical_volume_count;
-                if self.last_logical_volume_id == self.logical_volume_id {
-                    return Err(Error::NoAvailableSequences);
-                }
-                self.sequence_id = 0;
-            }
-        }
-
-        Ok(compose_snowprint(
-            duration_ms as u64,
-            self.logical_volume_base + self.logical_volume_id,
-            self.sequence_id,
-        ))
+        compose_snowprint_from_settings_and_state(&mut self.state, &self.settings, duration_ms)
     }
+}
+
+fn compose_snowprint_from_settings_and_state(
+    state: &mut SnowprintState,
+    settings: &SnowprintSettings,
+    duration_ms: u64,
+) -> Result<u64, Error> {
+    // time changed
+    if state.last_duration_ms != duration_ms {
+        // reset sequence
+        // record last logical volume
+        // increase logical volume and rotate
+        state.sequence_id = 0;
+        state.last_duration_ms = duration_ms;
+        state.last_logical_volume_id = state.logical_volume_id;
+        state.logical_volume_id = (state.logical_volume_id + 1) % settings.logical_volume_modulo;
+    } else {
+        // time did not change!
+        if state.sequence_id + 1 > MAX_SEQUENCES - 1 {
+            let next_logical_volume_id =
+                (state.logical_volume_id + 1) % settings.logical_volume_modulo;
+            // cycled through all sequences on all available logical shards
+            if next_logical_volume_id == state.last_logical_volume_id {
+                return Err(Error::NoAvailableSequences);
+            }
+            state.logical_volume_id = next_logical_volume_id;
+            state.sequence_id = 0;
+        }
+    }
+
+    Ok(compose_snowprint(
+        duration_ms as u64,
+        settings.logical_volume_base + state.logical_volume_id,
+        state.sequence_id,
+    ))
 }
 
 // at it's core this is a snowprint
