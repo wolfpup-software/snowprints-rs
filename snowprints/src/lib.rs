@@ -8,7 +8,6 @@ const SEQUENCE_BIT_MASK: u64 = (1 << SEQUENCE_BIT_LEN) - 1;
 const MAX_SEQUENCES: u64 = 2 ^ SEQUENCE_BIT_LEN;
 const LOGICAL_VOLUME_BIT_LEN: u64 = 13;
 const LOGICAL_VOLUME_BIT_MASK: u64 = ((1 << LOGICAL_VOLUME_BIT_LEN) - 1) << SEQUENCE_BIT_LEN;
-const MAX_LOGICAL_VOLUMES: u64 = 2 ^ LOGICAL_VOLUME_BIT_LEN;
 const TIME_BIT_LEN: u64 = 41;
 // number of milliseconds since UTC epoch time
 const JANUARY_1ST_2024_AS_DURATION: Duration = Duration::from_millis(1704067200541);
@@ -35,7 +34,7 @@ pub struct SnowprintSettings {
     pub logical_volume_base: u64,
 }
 
-pub struct SnowprintState {
+struct SnowprintState {
     pub last_duration_ms: u64,
     pub sequence_id: u64,
     pub logical_volume_id: u64,
@@ -80,25 +79,24 @@ fn compose_snowprint_from_settings_and_state(
     duration_ms: u64,
 ) -> Result<u64, Error> {
     // time changed
-    if state.last_duration_ms != duration_ms {
-        // reset sequence
-        // record last logical volume
-        // increase logical volume and rotate
-        state.sequence_id = 0;
+    if state.last_duration_ms < duration_ms {
         state.last_duration_ms = duration_ms;
+        state.sequence_id = 0;
         state.last_logical_volume_id = state.logical_volume_id;
         state.logical_volume_id = (state.logical_volume_id + 1) % settings.logical_volume_modulo;
     } else {
         // time did not change!
-        if state.sequence_id + 1 > MAX_SEQUENCES - 1 {
+        state.sequence_id += 1;
+        if state.sequence_id > MAX_SEQUENCES - 1 {
             let next_logical_volume_id =
                 (state.logical_volume_id + 1) % settings.logical_volume_modulo;
             // cycled through all sequences on all available logical shards
             if next_logical_volume_id == state.last_logical_volume_id {
                 return Err(Error::NoAvailableSequences);
             }
-            state.logical_volume_id = next_logical_volume_id;
+            // move to next shard
             state.sequence_id = 0;
+            state.logical_volume_id = next_logical_volume_id;
         }
     }
 
