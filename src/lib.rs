@@ -66,7 +66,7 @@ impl Snowprint {
 
     pub fn get_snowprint(&mut self) -> Result<u64, Error> {
         let duration_ms =
-            get_most_recent_duration(self.settings.origin_duration, self.state.last_duration_ms);
+            get_most_recent_duration_ms(self.settings.origin_duration, self.state.last_duration_ms);
         compose_snowprint_from_settings_and_state(&self.settings, &mut self.state, duration_ms)
     }
 }
@@ -82,7 +82,7 @@ fn check_settings(settings: &SnowprintSettings) -> Result<(), Error> {
     Ok(())
 }
 
-fn get_most_recent_duration(origin_duration: Duration, last_duration_ms: u64) -> u64 {
+fn get_most_recent_duration_ms(origin_duration: Duration, last_duration_ms: u64) -> u64 {
     match SystemTime::now().duration_since(UNIX_EPOCH + origin_duration) {
         // check time didn't go backward
         Ok(duration) => {
@@ -102,11 +102,10 @@ fn compose_snowprint_from_settings_and_state(
     state: &mut SnowprintState,
     duration_ms: u64,
 ) -> Result<u64, Error> {
-    // the following will mutate state object
     match state.last_duration_ms < duration_ms {
-        true => time_changed(state, settings, duration_ms),
+        true => modify_state_time_changed(state, settings, duration_ms),
         _ => {
-            if let Err(err) = time_did_not_change(state, settings) {
+            if let Err(err) = modify_state_time_did_not_change(state, settings) {
                 return Err(err);
             };
         }
@@ -119,14 +118,18 @@ fn compose_snowprint_from_settings_and_state(
     ))
 }
 
-fn time_changed(state: &mut SnowprintState, settings: &SnowprintSettings, duration_ms: u64) {
+fn modify_state_time_changed(
+    state: &mut SnowprintState,
+    settings: &SnowprintSettings,
+    duration_ms: u64,
+) {
     state.last_duration_ms = duration_ms;
     state.sequence_id = 0;
     state.last_logical_volume_id = state.logical_volume_id;
     state.logical_volume_id = (state.logical_volume_id + 1) % settings.logical_volume_modulo;
 }
 
-fn time_did_not_change(
+fn modify_state_time_did_not_change(
     state: &mut SnowprintState,
     settings: &SnowprintSettings,
 ) -> Result<(), Error> {
