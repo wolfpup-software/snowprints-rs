@@ -15,30 +15,32 @@ const LOGICAL_VOLUME_BIT_LEN: u64 = 13;
 const LOGICAL_VOLUME_BIT_MASK: u64 = ((1 << LOGICAL_VOLUME_BIT_LEN) - 1) << SEQUENCE_BIT_LEN;
 const MAX_LOGICAL_VOLUMES: u64 = u32::pow(2, LOGICAL_VOLUME_BIT_LEN as u32) as u64;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
     LogicalVolumeModuleIsZero,
     ExceededAvailableLogicalVolumes,
     FailedToParseOriginDuration,
     ExceededAvailableSequences,
 }
-
-pub struct Snowprint {
-    settings: SnowprintSettings,
-    state: SnowprintState,
-}
-
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SnowprintSettings {
     pub origin_duration: Duration,
     pub logical_volume_modulo: u64,
     pub logical_volume_base: u64,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct SnowprintState {
-    last_duration_ms: u64,
-    sequence_id: u64,
-    logical_volume_id: u64,
-    last_logical_volume_id: u64,
+    pub last_duration_ms: u64,
+    pub sequence_id: u64,
+    pub logical_volume_id: u64,
+    pub last_logical_volume_id: u64,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Snowprint {
+    settings: SnowprintSettings,
+    state: SnowprintState,
 }
 
 impl Snowprint {
