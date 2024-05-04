@@ -31,10 +31,10 @@ pub struct SnowprintSettings {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct SnowprintState {
-    pub last_duration_ms: u64,
+    pub prev_duration_ms: u64,
     pub sequence_id: u64,
     pub logical_volume_id: u64,
-    pub last_logical_volume_id: u64,
+    pub prev_logical_volume_id: u64,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -58,17 +58,17 @@ impl Snowprint {
         Ok(Snowprint {
             settings: settings,
             state: SnowprintState {
-                last_duration_ms: duration_ms,
+                prev_duration_ms: duration_ms,
                 sequence_id: 0,
                 logical_volume_id: 0,
-                last_logical_volume_id: 0,
+                prev_logical_volume_id: 0,
             },
         })
     }
 
     pub fn get_snowprint(&mut self) -> Result<u64, Error> {
         let duration_ms =
-            get_most_recent_duration_ms(self.settings.origin_duration, self.state.last_duration_ms);
+            get_most_recent_duration_ms(self.settings.origin_duration, self.state.prev_duration_ms);
         compose_snowprint_from_settings_and_state(&self.settings, &mut self.state, duration_ms)
     }
 }
@@ -84,18 +84,18 @@ fn check_settings(settings: &SnowprintSettings) -> Result<(), Error> {
     Ok(())
 }
 
-fn get_most_recent_duration_ms(origin_duration: Duration, last_duration_ms: u64) -> u64 {
+fn get_most_recent_duration_ms(origin_duration: Duration, prev_duration_ms: u64) -> u64 {
     match SystemTime::now().duration_since(UNIX_EPOCH + origin_duration) {
         // check time didn't go backward
         Ok(duration) => {
             let dur_ms = duration.as_millis() as u64;
-            match dur_ms > last_duration_ms {
+            match dur_ms > prev_duration_ms {
                 true => dur_ms,
-                _ => last_duration_ms,
+                _ => prev_duration_ms,
             }
         }
         // yikes! time went backwards so use the most recent step
-        _ => last_duration_ms,
+        _ => prev_duration_ms,
     }
 }
 
@@ -104,7 +104,7 @@ fn compose_snowprint_from_settings_and_state(
     state: &mut SnowprintState,
     duration_ms: u64,
 ) -> Result<u64, Error> {
-    match state.last_duration_ms < duration_ms {
+    match state.prev_duration_ms < duration_ms {
         true => modify_state_time_changed(state, settings, duration_ms),
         _ => {
             if let Err(err) = modify_state_time_did_not_change(state, settings) {
@@ -125,9 +125,9 @@ fn modify_state_time_changed(
     settings: &SnowprintSettings,
     duration_ms: u64,
 ) {
-    state.last_duration_ms = duration_ms;
+    state.prev_duration_ms = duration_ms;
     state.sequence_id = 0;
-    state.last_logical_volume_id = state.logical_volume_id;
+    state.prev_logical_volume_id = state.logical_volume_id;
     state.logical_volume_id = (state.logical_volume_id + 1) % settings.logical_volume_modulo;
 }
 
@@ -139,7 +139,7 @@ fn modify_state_time_did_not_change(
     if state.sequence_id > MAX_SEQUENCES - 1 {
         let next_logical_volume_id = (state.logical_volume_id + 1) % settings.logical_volume_modulo;
         // cycled through all sequences on all available logical shards
-        if next_logical_volume_id == state.last_logical_volume_id {
+        if next_logical_volume_id == state.prev_logical_volume_id {
             return Err(Error::ExceededAvailableSequences);
         }
         // move to next shard
