@@ -23,14 +23,14 @@ pub enum Error {
     ExceededAvailableSequences,
 }
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct SnowprintSettings {
+pub struct Settings {
     pub origin_duration: Duration,
     pub logical_volume_modulo: u64,
     pub logical_volume_base: u64,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-struct SnowprintState {
+struct State {
     pub prev_duration_ms: u64,
     pub sequence_id: u64,
     pub logical_volume_id: u64,
@@ -39,12 +39,12 @@ struct SnowprintState {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Snowprint {
-    settings: SnowprintSettings,
-    state: SnowprintState,
+    settings: Settings,
+    state: State,
 }
 
 impl Snowprint {
-    pub fn new(settings: SnowprintSettings) -> Result<Snowprint, Error> {
+    pub fn new(settings: Settings) -> Result<Snowprint, Error> {
         if let Err(err) = check_settings(&settings) {
             return Err(err);
         }
@@ -57,7 +57,7 @@ impl Snowprint {
 
         Ok(Snowprint {
             settings: settings,
-            state: SnowprintState {
+            state: State {
                 prev_duration_ms: duration_ms,
                 sequence_id: 0,
                 logical_volume_id: 0,
@@ -73,7 +73,7 @@ impl Snowprint {
     }
 }
 
-fn check_settings(settings: &SnowprintSettings) -> Result<(), Error> {
+fn check_settings(settings: &Settings) -> Result<(), Error> {
     if settings.logical_volume_modulo == 0 {
         return Err(Error::LogicalVolumeModuleIsZero);
     }
@@ -100,8 +100,8 @@ fn get_most_recent_duration_ms(origin_duration: Duration, prev_duration_ms: u64)
 }
 
 fn compose_snowprint_from_settings_and_state(
-    settings: &SnowprintSettings,
-    state: &mut SnowprintState,
+    settings: &Settings,
+    state: &mut State,
     duration_ms: u64,
 ) -> Result<u64, Error> {
     match state.prev_duration_ms < duration_ms {
@@ -120,21 +120,14 @@ fn compose_snowprint_from_settings_and_state(
     ))
 }
 
-fn modify_state_time_changed(
-    state: &mut SnowprintState,
-    settings: &SnowprintSettings,
-    duration_ms: u64,
-) {
+fn modify_state_time_changed(state: &mut State, settings: &Settings, duration_ms: u64) {
     state.prev_duration_ms = duration_ms;
     state.sequence_id = 0;
     state.prev_logical_volume_id = state.logical_volume_id;
     state.logical_volume_id = (state.logical_volume_id + 1) % settings.logical_volume_modulo;
 }
 
-fn modify_state_time_did_not_change(
-    state: &mut SnowprintState,
-    settings: &SnowprintSettings,
-) -> Result<(), Error> {
+fn modify_state_time_did_not_change(state: &mut State, settings: &Settings) -> Result<(), Error> {
     state.sequence_id += 1;
     if state.sequence_id > MAX_SEQUENCES - 1 {
         let next_logical_volume_id = (state.logical_volume_id + 1) % settings.logical_volume_modulo;
