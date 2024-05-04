@@ -20,7 +20,7 @@ pub enum Error {
     LogicalVolumeModuleIsZero,
     ExceededAvailableLogicalVolumes,
     FailedToParseOriginDuration,
-    NoAvailableSequences,
+    ExceededAvailableSequences,
 }
 
 pub struct Snowprint {
@@ -138,7 +138,7 @@ fn modify_state_time_did_not_change(
         let next_logical_volume_id = (state.logical_volume_id + 1) % settings.logical_volume_modulo;
         // cycled through all sequences on all available logical shards
         if next_logical_volume_id == state.last_logical_volume_id {
-            return Err(Error::NoAvailableSequences);
+            return Err(Error::ExceededAvailableSequences);
         }
         // move to next shard
         state.sequence_id = 0;
