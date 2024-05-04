@@ -1,6 +1,8 @@
-use snowprints::{compose_snowprint, decompose_snowprint, Snowprint};
+use std::time::Duration;
+use snowprints::{compose_snowprint, decompose_snowprint, Snowprint, SnowprintSettings};
 
-const JANUARY_1ST_2024_AS_MS: u64 = 1704070800;
+const JANUARY_1ST_2024_AS_MS: u64 = 1704096000000;
+const JANUARY_1ST_2024_AS_DURATION: Duration = Duration::from_millis(JANUARY_1ST_2024_AS_MS);
 
 #[test]
 fn compose_and_decompose_snowprint() {
@@ -31,8 +33,13 @@ fn compose_and_decompose_snowprint_from_a_real_date() {
 
 #[test]
 fn snowprint_struct_returns_valid_ids() {
-    let mut builder = Snowprint::new();
+    let settings = SnowprintSettings {
+        origin_timestamp_ms: JANUARY_1ST_2024_AS_MS,
+        logical_volume_base: 0,
+        logical_volume_modulo: 8192,
+    };
+    let mut builder = Snowprint::new(settings);
     let snowprint = builder.get_snowprint();
 
-    println!("{}", snowprint)
+    println!("{:?}", snowprint)
 }

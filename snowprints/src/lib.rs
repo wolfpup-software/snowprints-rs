@@ -12,6 +12,7 @@ const TIME_BIT_LEN: u64 = 41;
 // number of milliseconds since UTC epoch time
 const JANUARY_1ST_2024_AS_DURATION: Duration = Duration::from_millis(1704067200541);
 
+#[derive(Debug)]
 pub enum Error {
     NoAvailableSequences,
 }
@@ -29,12 +30,13 @@ pub struct Snowprint {
 // This assumes sequences + logical volume ids occur in the same ms
 
 pub struct SnowprintSettings {
-    pub origin_timestamp_ms: SystemTime,
+    pub origin_timestamp_ms: u64,
     pub logical_volume_modulo: u64,
     pub logical_volume_base: u64,
 }
 
 struct SnowprintState {
+    pub origin_duration: Duration,
     pub last_duration_ms: u64,
     pub sequence_id: u64,
     pub logical_volume_id: u64,
@@ -43,10 +45,22 @@ struct SnowprintState {
 
 impl Snowprint {
     pub fn new(settings: SnowprintSettings) -> Snowprint {
+        let origin_duration = Duration::from_millis(settings.origin_timestamp_ms);
+        let duration_ms = match SystemTime::now().duration_since(UNIX_EPOCH + origin_duration) {
+            // check time didn't go backward
+            Ok(duration) => duration.as_millis() as u64,
+            // time went backwards so use the most recent step
+            _ => {
+                println!("ops went backwards!");
+                settings.origin_timestamp_ms
+            }
+        };
+
         Snowprint {
             settings: settings,
             state: SnowprintState {
-                last_duration_ms: 0,
+                origin_duration: origin_duration,
+                last_duration_ms: duration_ms,
                 sequence_id: 0,
                 logical_volume_id: 0,
                 last_logical_volume_id: 0,
@@ -55,19 +69,19 @@ impl Snowprint {
     }
 
     pub fn get_snowprint(&mut self) -> Result<u64, Error> {
-        let duration_ms = match SystemTime::now().duration_since(self.settings.origin_timestamp_ms)
-        {
-            // check time didn't go backward
-            Ok(duration) => {
-                let temp_duration = duration.as_millis() as u64;
-                match temp_duration > self.state.last_duration_ms {
-                    true => temp_duration,
-                    _ => self.state.last_duration_ms,
+        let duration_ms =
+            match SystemTime::now().duration_since(UNIX_EPOCH + self.state.origin_duration) {
+                // check time didn't go backward
+                Ok(duration) => {
+                    let dur_ms = duration.as_millis() as u64;
+                    match dur_ms > self.state.last_duration_ms {
+                        true => dur_ms,
+                        _ => self.state.last_duration_ms,
+                    }
                 }
-            }
-            // time went backwards so use the most recent step
-            _ => self.state.last_duration_ms,
-        };
+                // time went backwards so use the most recent step
+                _ => self.state.last_duration_ms,
+            };
 
         compose_snowprint_from_settings_and_state(&mut self.state, &self.settings, duration_ms)
     }
