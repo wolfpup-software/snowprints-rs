@@ -35,33 +35,23 @@ pub struct SnowprintSettings {
 }
 
 struct SnowprintState {
-    pub last_duration_ms: u64,
-    pub sequence_id: u64,
-    pub logical_volume_id: u64,
-    pub last_logical_volume_id: u64,
+    last_duration_ms: u64,
+    sequence_id: u64,
+    logical_volume_id: u64,
+    last_logical_volume_id: u64,
 }
 
 impl Snowprint {
     pub fn new(settings: SnowprintSettings) -> Result<Snowprint, Error> {
-        if settings.logical_volume_modulo == 0 {
-            return Err(Error::LogicalVolumeModuleIsZero);
+        if let Err(err) = check_settings(&settings) {
+            return Err(err);
         }
-        if (settings.logical_volume_base + settings.logical_volume_modulo) > MAX_LOGICAL_VOLUMES {
-            println!(
-                "{} {}",
-                MAX_LOGICAL_VOLUMES,
-                settings.logical_volume_base + settings.logical_volume_modulo
-            );
-            return Err(Error::ExceededAvailableLogicalVolumes);
-        }
+
         let duration_ms =
             match SystemTime::now().duration_since(UNIX_EPOCH + settings.origin_duration) {
                 Ok(duration) => duration.as_millis() as u64,
                 _ => return Err(Error::FailedToParseOriginDuration),
             };
-
-        println!("duration_ms: {:?}", duration_ms);
-        println!("duration_before epoch: {:?}", settings.origin_duration);
 
         Ok(Snowprint {
             settings: settings,
@@ -75,31 +65,44 @@ impl Snowprint {
     }
 
     pub fn get_snowprint(&mut self) -> Result<u64, Error> {
-        let duration_ms = get_duration(&self.state, &self.settings);
-        compose_snowprint_from_state_and_settings(&mut self.state, &self.settings, duration_ms)
+        let duration_ms =
+            get_most_recent_duration(self.settings.origin_duration, self.state.last_duration_ms);
+        compose_snowprint_from_settings_and_state(&self.settings, &mut self.state, duration_ms)
     }
 }
 
-fn get_duration(state: &SnowprintState, settings: &SnowprintSettings) -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH + settings.origin_duration) {
+fn check_settings(settings: &SnowprintSettings) -> Result<(), Error> {
+    if settings.logical_volume_modulo == 0 {
+        return Err(Error::LogicalVolumeModuleIsZero);
+    }
+    if (settings.logical_volume_base + settings.logical_volume_modulo) > MAX_LOGICAL_VOLUMES {
+        return Err(Error::ExceededAvailableLogicalVolumes);
+    }
+
+    Ok(())
+}
+
+fn get_most_recent_duration(origin_duration: Duration, last_duration_ms: u64) -> u64 {
+    match SystemTime::now().duration_since(UNIX_EPOCH + origin_duration) {
         // check time didn't go backward
         Ok(duration) => {
             let dur_ms = duration.as_millis() as u64;
-            match dur_ms > state.last_duration_ms {
+            match dur_ms > last_duration_ms {
                 true => dur_ms,
-                _ => state.last_duration_ms,
+                _ => last_duration_ms,
             }
         }
-        // time went backwards so use the most recent step
-        _ => state.last_duration_ms,
+        // yikes! time went backwards so use the most recent step
+        _ => last_duration_ms,
     }
 }
 
-fn compose_snowprint_from_state_and_settings(
-    state: &mut SnowprintState,
+fn compose_snowprint_from_settings_and_state(
     settings: &SnowprintSettings,
+    state: &mut SnowprintState,
     duration_ms: u64,
 ) -> Result<u64, Error> {
+    // the following will mutate state object
     match state.last_duration_ms < duration_ms {
         true => time_changed(state, settings, duration_ms),
         _ => {
@@ -110,7 +113,7 @@ fn compose_snowprint_from_state_and_settings(
     }
 
     Ok(compose_snowprint(
-        duration_ms as u64,
+        duration_ms,
         settings.logical_volume_base + state.logical_volume_id,
         state.sequence_id,
     ))
