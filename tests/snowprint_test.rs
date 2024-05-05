@@ -1,5 +1,6 @@
-use snowprints::{compose_snowprint, decompose_snowprint, Settings, Snowprint};
+use snowprints::{compose_snowprint, decompose_snowprint, Error, Settings, Snowprint};
 use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const JANUARY_1ST_2024_AS_MS: u64 = 1704096000000;
 const JANUARY_1ST_2024_AS_DURATION: Duration = Duration::from_millis(JANUARY_1ST_2024_AS_MS);
@@ -34,7 +35,7 @@ fn compose_and_decompose_snowprint_from_a_real_date() {
 #[test]
 fn snowprint_struct_builds_and_returns_snowprint() {
     let settings = Settings {
-        origin_duration: JANUARY_1ST_2024_AS_DURATION,
+        origin_system_time: UNIX_EPOCH + JANUARY_1ST_2024_AS_DURATION,
         logical_volume_base: 0,
         logical_volume_modulo: 8192,
     };
@@ -48,3 +49,6 @@ fn snowprint_struct_builds_and_returns_snowprint() {
 
     println!("{:?}", snowprint)
 }
+
+// test starting logical volumes from zero
+// test last possible logical volume sequence

@@ -36,10 +36,10 @@ In the example below, a `Snowprint` called `snowprinter` will track milliseconds
 
 ```rust
 use std::time::Duration;
-use snowprints::{Settings, Snowprint, decompose_snowprint};
+use snowprints::{Settings, Snowprint};
 
 let settings = Settings {
-    origin_duration: Duration::from_millis(EPOCH_2024_01_01_AS_MS),
+    origin_system_time: UNIX_EPOCH + Duration::from_millis(EPOCH_2024_01_01_AS_MS),
     logical_volume_base: 0,
     logical_volume_modulo: 8192,
 };
@@ -53,6 +53,8 @@ let mut snowprinter = match Snowprint::new(settings) {
 The function `snowprinter.get_snowprint()` will only error when available `logical_volumes` and `sequences` have been exhausted for the current `millisecond`.
 
 ```rust
+use snowprints::decompose_snowprint;
+
 let snowprint = match snowprinter.get_snowprint() {
     Ok(sp) => sp,
     Err(err) => return println!("ran out of sequences and ids!: {}", err.to_string()),
