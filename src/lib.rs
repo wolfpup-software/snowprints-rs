@@ -35,9 +35,9 @@ pub struct Settings {
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct State {
     pub prev_duration_ms: u64,
-    pub sequence_id: u64,
-    pub logical_volume_id: u64,
-    pub prev_logical_volume_id: u64,
+    pub sequence: u64,
+    pub logical_volume: u64,
+    pub prev_logical_volume: u64,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -61,39 +61,39 @@ impl Snowprint {
             settings: settings,
             state: State {
                 prev_duration_ms: duration_ms,
-                sequence_id: 0,
-                logical_volume_id: 0,
-                prev_logical_volume_id: 0,
+                sequence: 0,
+                logical_volume: 0,
+                prev_logical_volume: 0,
             },
         })
     }
 
-    pub fn get_snowprint(&mut self) -> Result<u64, Error> {
+    pub fn compose(&mut self) -> Result<u64, Error> {
         let duration_ms = get_most_recent_duration_ms(
             self.settings.origin_system_time,
             self.state.prev_duration_ms,
         );
-        compose_snowprint_from_settings_and_state(&self.settings, &mut self.state, duration_ms)
+        compose_from_settings_and_state(&self.settings, &mut self.state, duration_ms)
     }
 }
 
 // at it's core this is a snowprint
-pub fn compose_snowprint(ms_timestamp: u64, logical_id: u64, ticket_id: u64) -> u64 {
+pub fn compose(ms_timestamp: u64, logical_volume: u64, ticket_id: u64) -> u64 {
     ms_timestamp << (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN)
-        | logical_id << SEQUENCE_BIT_LEN
+        | logical_volume << SEQUENCE_BIT_LEN
         | ticket_id
 }
 
-pub fn decompose_snowprint(snowprint: u64) -> (u64, u64, u64) {
+pub fn decompose(snowprint: u64) -> (u64, u64, u64) {
     let time = snowprint >> (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN);
-    let logical_id = (snowprint & LOGICAL_VOLUME_BIT_MASK) >> SEQUENCE_BIT_LEN;
+    let logical_volume = (snowprint & LOGICAL_VOLUME_BIT_MASK) >> SEQUENCE_BIT_LEN;
     let ticket_id = snowprint & SEQUENCE_BIT_MASK;
 
-    (time, logical_id, ticket_id)
+    (time, logical_volume, ticket_id)
 }
 
 fn check_settings(settings: &Settings) -> Result<(), Error> {
-    if settings.logical_volume_modulo == 1 {
+    if settings.logical_volume_modulo == 0 {
         return Err(Error::LogicalVolumeModuloIsZero);
     }
     if (settings.logical_volume_base + settings.logical_volume_modulo) > MAX_LOGICAL_VOLUMES {
@@ -118,7 +118,7 @@ fn get_most_recent_duration_ms(origin_system_time: SystemTime, prev_duration_ms:
     }
 }
 
-fn compose_snowprint_from_settings_and_state(
+fn compose_from_settings_and_state(
     settings: &Settings,
     state: &mut State,
     duration_ms: u64,
@@ -134,34 +134,34 @@ fn compose_snowprint_from_settings_and_state(
         }
     }
 
-    Ok(compose_snowprint(
+    Ok(compose(
         duration_ms,
-        settings.logical_volume_base + state.logical_volume_id,
-        state.sequence_id,
+        settings.logical_volume_base + state.logical_volume,
+        state.sequence,
     ))
 }
 
 fn modify_state_time_changed(state: &mut State, logical_volume_modulo: u64, duration_ms: u64) {
     state.prev_duration_ms = duration_ms;
-    state.sequence_id = 0;
-    state.prev_logical_volume_id = state.logical_volume_id;
-    state.logical_volume_id = (state.logical_volume_id + 1) % logical_volume_modulo;
+    state.sequence = 0;
+    state.prev_logical_volume = state.logical_volume;
+    state.logical_volume = (state.logical_volume + 1) % logical_volume_modulo;
 }
 
 fn modify_state_time_did_not_change(
     state: &mut State,
     logical_volume_modulo: u64,
 ) -> Result<(), Error> {
-    state.sequence_id += 1;
-    if state.sequence_id > MAX_SEQUENCES - 1 {
-        let next_logical_volume_id = (state.logical_volume_id + 1) % logical_volume_modulo;
+    state.sequence += 1;
+    if state.sequence > MAX_SEQUENCES - 1 {
+        let next_logical_volume = (state.logical_volume + 1) % logical_volume_modulo;
         // cycled through all sequences on all available logical shards
-        if next_logical_volume_id == state.prev_logical_volume_id {
+        if next_logical_volume == state.prev_logical_volume {
             return Err(Error::ExceededAvailableSequences);
         }
         // move to next shard
-        state.sequence_id = 0;
-        state.logical_volume_id = next_logical_volume_id;
+        state.sequence = 0;
+        state.logical_volume = next_logical_volume;
     }
     Ok(())
 }

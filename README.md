@@ -4,20 +4,20 @@ Create unique, sortable ids.
 
 ## How to use
 
-To create a `snowprint` use the `compose_snowprint` function.
+To create a `snowprint` use the `compose` function.
 
 ```rust
-use snowprints::compose_snowprint;
+use snowprints::compose;
 
-let snowprint = compose_snowprint(duration_ms, logical_volume_id, sequence_id);
+let snowprint = compose(duration_ms, logical_volume, sequence);
 ```
 
-To get values from a `snowprint` use the `decompose_snowprint` function.
+To get values from a `snowprint` use the `decompose` function.
 
 ```rust
-use snowprints::decompose_snowprint;
+use snowprints::decompose;
 
-let (timestamp_ms, logical_volume_id, sequence_id) = decompose_snowprint(snowprint);
+let (timestamp_ms, logical_volume, sequence) = decompose(snowprint);
 ```
 
 ## Snowprint generation
@@ -30,7 +30,7 @@ First, define a `Settings` struct.
 
 The `logical_volume_base` property defines where to begin logical volume rotations. The `logical_volume_modulo` property defines how many logical volumes will be rotated.
 
-So to rotate through logical volumes `1024-2047` set `logical_volume_base` to `1024` and `logical_volume_modulo` to `2048`.
+So to rotate through logical volumes `1024-2047` set `logical_volume_base` to `1024` and `logical_volume_modulo` to `1024`.
 
 In the example below, a `Snowprint` called `snowprinter` will track milliseconds since `2024 Jan 1st` and rotate through logical volumes `0-8191`.
 
@@ -46,30 +46,30 @@ let settings = Settings {
 
 let mut snowprinter = match Snowprint::new(settings) {
     Ok(snow) => snow,
-    Err(err) => return println!("settings might be bad: {}", err.to_string()),
+    Err(err) => return println!("Settings did not pass check!\n{}", err.to_string()),
 };
 ```
 
-The function `snowprinter.get_snowprint()` will only error when available `logical_volumes` and `sequences` have been exhausted for the current `millisecond`.
+The function `snowprinter.compose()` will only error when available `logical_volumes` and `sequences` have been exhausted for the current `millisecond`.
 
 ```rust
-use snowprints::decompose_snowprint;
+use snowprints::decompose;
 
-let snowprint = match snowprinter.get_snowprint() {
+let snowprint = match snowprinter.compose() {
     Ok(sp) => sp,
-    Err(err) => return println!("ran out of sequences and ids!: {}", err.to_string()),
+    Err(err) => return println!("Exceeded all available logical volumes and sequences!\n{}", err.to_string()),
 };
 
-let (timestamp_ms, logical_volume_id, sequence_id) = decompose_snowprint(snowprint);
+let (timestamp_ms, logical_volume, sequence) = decompose(snowprint);
 ```
 
 ## What is a snowprint?
 
-A snowprint is an alternative to unique id generation patterns like `snowflakes`.
+A snowprint is an alternative to unique id generation patterns like [snowflake ids](https://en.wikipedia.org/wiki/Snowflake_ID).
 A `snowprint` is defined by bitshifting the following values into a 64bit unsigned integer:
-- 41bit `ms duration` since an arbitrary date in millseconds
-- 13bit `logical_volume` between `0-8191`
-- 10bit `sequence` between `0-1023`.
+- 41 bits `duration` since an arbitrary date in millseconds
+- 13 bits `logical_volume` between `0-8191`
+- 10 bits `sequence` between `0-1023`.
 
 ## License
 
