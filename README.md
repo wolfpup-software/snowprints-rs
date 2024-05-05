@@ -4,20 +4,20 @@ Create unique, sortable ids.
 
 ## How to use
 
-To create a `snowprint` use the `compose_snowprint` function.
+To create a `snowprint` use the `compose` function.
 
 ```rust
-use snowprints::compose_snowprint;
+use snowprints::compose;
 
-let snowprint = compose_snowprint(duration_ms, logical_volume_id, sequence_id);
+let snowprint = compose(duration_ms, logical_volume_id, sequence_id);
 ```
 
-To get values from a `snowprint` use the `decompose_snowprint` function.
+To get values from a `snowprint` use the `decompose` function.
 
 ```rust
-use snowprints::decompose_snowprint;
+use snowprints::decompose;
 
-let (timestamp_ms, logical_volume_id, sequence_id) = decompose_snowprint(snowprint);
+let (timestamp_ms, logical_volume_id, sequence_id) = decompose(snowprint);
 ```
 
 ## Snowprint generation
@@ -50,17 +50,17 @@ let mut snowprinter = match Snowprint::new(settings) {
 };
 ```
 
-The function `snowprinter.get_snowprint()` will only error when available `logical_volumes` and `sequences` have been exhausted for the current `millisecond`.
+The function `snowprinter.compose()` will only error when available `logical_volumes` and `sequences` have been exhausted for the current `millisecond`.
 
 ```rust
-use snowprints::decompose_snowprint;
+use snowprints::decompose;
 
-let snowprint = match snowprinter.get_snowprint() {
+let snowprint = match snowprinter.compose() {
     Ok(sp) => sp,
     Err(err) => return println!("ran out of sequences and ids!: {}", err.to_string()),
 };
 
-let (timestamp_ms, logical_volume_id, sequence_id) = decompose_snowprint(snowprint);
+let (timestamp_ms, logical_volume_id, sequence_id) = decompose(snowprint);
 ```
 
 ## What is a snowprint?

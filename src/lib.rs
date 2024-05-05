@@ -68,23 +68,23 @@ impl Snowprint {
         })
     }
 
-    pub fn get_snowprint(&mut self) -> Result<u64, Error> {
+    pub fn compose(&mut self) -> Result<u64, Error> {
         let duration_ms = get_most_recent_duration_ms(
             self.settings.origin_system_time,
             self.state.prev_duration_ms,
         );
-        compose_snowprint_from_settings_and_state(&mut self.state, &self.settings, duration_ms)
+        compose_from_settings_and_state(&self.settings, &mut self.state, duration_ms)
     }
 }
 
 // at it's core this is a snowprint
-pub fn compose_snowprint(ms_timestamp: u64, logical_id: u64, ticket_id: u64) -> u64 {
+pub fn compose(ms_timestamp: u64, logical_id: u64, ticket_id: u64) -> u64 {
     ms_timestamp << (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN)
         | logical_id << SEQUENCE_BIT_LEN
         | ticket_id
 }
 
-pub fn decompose_snowprint(snowprint: u64) -> (u64, u64, u64) {
+pub fn decompose(snowprint: u64) -> (u64, u64, u64) {
     let time = snowprint >> (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN);
     let logical_id = (snowprint & LOGICAL_VOLUME_BIT_MASK) >> SEQUENCE_BIT_LEN;
     let ticket_id = snowprint & SEQUENCE_BIT_MASK;
@@ -118,9 +118,9 @@ fn get_most_recent_duration_ms(origin_system_time: SystemTime, prev_duration_ms:
     }
 }
 
-fn compose_snowprint_from_settings_and_state(
-    state: &mut State,
+fn compose_from_settings_and_state(
     settings: &Settings,
+    state: &mut State,
     duration_ms: u64,
 ) -> Result<u64, Error> {
     match state.prev_duration_ms < duration_ms {
@@ -134,7 +134,7 @@ fn compose_snowprint_from_settings_and_state(
         }
     }
 
-    Ok(compose_snowprint(
+    Ok(compose(
         duration_ms,
         settings.logical_volume_base + state.logical_volume_id,
         state.sequence_id,

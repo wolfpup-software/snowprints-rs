@@ -1,9 +1,5 @@
 use super::*;
-use std::time::Duration;
-use std::time::{SystemTime, UNIX_EPOCH};
-
-const JANUARY_1ST_2024_AS_MS: u64 = 1704096000000;
-const JANUARY_1ST_2024_AS_DURATION: Duration = Duration::from_millis(JANUARY_1ST_2024_AS_MS);
+use std::time::{Duration, SystemTime};
 
 #[test]
 fn test_check_failed_settings() {
@@ -123,7 +119,7 @@ fn test_modify_state_time_did_not_change() {
 }
 
 #[test]
-fn test_compose_snowprint_from_settings_and_state() {
+fn test_compose_from_settings_and_state() {
     // time did not change
     let settings = Settings {
         origin_system_time: SystemTime::now(),
@@ -138,15 +134,15 @@ fn test_compose_snowprint_from_settings_and_state() {
     };
 
     let duration_ms = 0;
-    let snowprint = compose_snowprint_from_settings_and_state(&mut state, &settings, duration_ms);
+    let snowprint = compose_from_settings_and_state(&settings, &mut state, duration_ms);
     match snowprint {
         Ok(sp) => {
-            let (timestamp, logical_volume, sequence) = decompose_snowprint(sp);
+            let (_timestamp, logical_volume, sequence) = decompose(sp);
 
             assert_eq!(logical_volume, 6144);
             assert_eq!(sequence, 256);
         }
-        // trigger an error by comparing incorrect error
+        // error by comparing result to incorrect error
         Err(err) => assert_eq!(Error::ExceededAvailableLogicalVolumes, err),
     }
 
@@ -158,7 +154,7 @@ fn test_compose_snowprint_from_settings_and_state() {
         prev_logical_volume_id: 0,
     };
 
-    let snowprint = compose_snowprint_from_settings_and_state(&mut state, &settings, duration_ms);
+    let snowprint = compose_from_settings_and_state(&settings, &mut state, duration_ms);
     assert_eq!(Err(Error::ExceededAvailableSequences), snowprint);
 
     // time changed
@@ -170,15 +166,15 @@ fn test_compose_snowprint_from_settings_and_state() {
         prev_logical_volume_id: 0,
     };
 
-    let snowprint = compose_snowprint_from_settings_and_state(&mut state, &settings, duration_ms);
+    let snowprint = compose_from_settings_and_state(&settings, &mut state, duration_ms);
     match snowprint {
         Ok(sp) => {
-            let (timestamp, logical_volume, sequence) = decompose_snowprint(sp);
+            let (_timestamp, logical_volume, sequence) = decompose(sp);
 
             assert_eq!(logical_volume, 4096);
             assert_eq!(sequence, 0);
         }
-        // trigger an error by comparing incorrect error
+        // error by comparing result to incorrect error
         Err(err) => assert_eq!(Error::ExceededAvailableLogicalVolumes, err),
     }
 }
