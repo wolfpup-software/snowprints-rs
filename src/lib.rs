@@ -93,7 +93,7 @@ pub fn decompose_snowprint(snowprint: u64) -> (u64, u64, u64) {
 }
 
 fn check_settings(settings: &Settings) -> Result<(), Error> {
-    if settings.logical_volume_modulo < 1 {
+    if settings.logical_volume_modulo == 1 {
         return Err(Error::LogicalVolumeModuloIsZero);
     }
     if (settings.logical_volume_base + settings.logical_volume_modulo) > MAX_LOGICAL_VOLUMES {
