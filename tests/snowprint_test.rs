@@ -7,28 +7,28 @@ const JANUARY_1ST_2024_AS_DURATION: Duration = Duration::from_millis(JANUARY_1ST
 #[test]
 fn compose_and_decompose() {
     let time = 987654321;
-    let logical_id = 7890;
-    let ticket_id = 956;
+    let logical_volume = 7890;
+    let sequence = 956;
 
-    let snowprint = compose(time, logical_id, ticket_id);
-    let (d_time, d_logical_id, d_ticket_id) = decompose(snowprint);
+    let snowprint = compose(time, logical_volume, sequence);
+    let (d_time, d_logical_volume, d_sequence) = decompose(snowprint);
 
     assert_eq!(time, d_time);
-    assert_eq!(logical_id, d_logical_id);
-    assert_eq!(ticket_id, d_ticket_id);
+    assert_eq!(logical_volume, d_logical_volume);
+    assert_eq!(sequence, d_sequence);
 }
 
 #[test]
 fn compose_and_decompose_from_a_real_date() {
-    let logical_id = 7890;
-    let ticket_id = 956;
+    let logical_volume = 7890;
+    let sequence = 956;
 
-    let snowprint = compose(JANUARY_1ST_2024_AS_MS, logical_id, ticket_id);
-    let (d_time, d_logical_id, d_ticket_id) = decompose(snowprint);
+    let snowprint = compose(JANUARY_1ST_2024_AS_MS, logical_volume, sequence);
+    let (d_time, d_logical_volume, d_sequence) = decompose(snowprint);
 
     assert_eq!(JANUARY_1ST_2024_AS_MS, d_time);
-    assert_eq!(logical_id, d_logical_id);
-    assert_eq!(ticket_id, d_ticket_id);
+    assert_eq!(logical_volume, d_logical_volume);
+    assert_eq!(sequence, d_sequence);
 }
 
 #[test]

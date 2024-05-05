@@ -40,18 +40,18 @@ fn test_get_most_recent_duration_ms() {
 fn test_modify_state_time_changed() {
     let mut state = State {
         prev_duration_ms: 0,
-        sequence_id: 82,
-        logical_volume_id: 0,
-        prev_logical_volume_id: 0,
+        sequence: 82,
+        logical_volume: 0,
+        prev_logical_volume: 0,
     };
 
     modify_state_time_changed(&mut state, 8192, 5);
 
     let expected_state = State {
         prev_duration_ms: 5,
-        sequence_id: 0,
-        logical_volume_id: 1,
-        prev_logical_volume_id: 0,
+        sequence: 0,
+        logical_volume: 1,
+        prev_logical_volume: 0,
     };
 
     assert_eq!(expected_state, state);
@@ -60,9 +60,9 @@ fn test_modify_state_time_changed() {
 
     let expected_state = State {
         prev_duration_ms: 6,
-        sequence_id: 0,
-        logical_volume_id: 2,
-        prev_logical_volume_id: 1,
+        sequence: 0,
+        logical_volume: 2,
+        prev_logical_volume: 1,
     };
 
     assert_eq!(expected_state, state);
@@ -73,45 +73,45 @@ fn test_modify_state_time_did_not_change() {
     // sequence
     let mut state = State {
         prev_duration_ms: 0,
-        sequence_id: 0,
-        logical_volume_id: 0,
-        prev_logical_volume_id: 0,
+        sequence: 0,
+        logical_volume: 0,
+        prev_logical_volume: 0,
     };
     let result = modify_state_time_did_not_change(&mut state, 8192);
     assert_eq!(Ok(()), result);
 
     let expected_state = State {
         prev_duration_ms: 0,
-        sequence_id: 1,
-        logical_volume_id: 0,
-        prev_logical_volume_id: 0,
+        sequence: 1,
+        logical_volume: 0,
+        prev_logical_volume: 0,
     };
     assert_eq!(expected_state, state);
 
     // rollover
     let mut state = State {
         prev_duration_ms: 0,
-        sequence_id: 1023,
-        logical_volume_id: 8191,
-        prev_logical_volume_id: 8191,
+        sequence: 1023,
+        logical_volume: 8191,
+        prev_logical_volume: 8191,
     };
     let result = modify_state_time_did_not_change(&mut state, 8192);
     assert_eq!(Ok(()), result);
 
     let expected_state = State {
         prev_duration_ms: 0,
-        sequence_id: 0,
-        logical_volume_id: 0,
-        prev_logical_volume_id: 8191,
+        sequence: 0,
+        logical_volume: 0,
+        prev_logical_volume: 8191,
     };
     assert_eq!(expected_state, state);
 
     // fail
     let mut state = State {
         prev_duration_ms: 0,
-        sequence_id: 1023,
-        logical_volume_id: 8191,
-        prev_logical_volume_id: 0,
+        sequence: 1023,
+        logical_volume: 8191,
+        prev_logical_volume: 0,
     };
     let result = modify_state_time_did_not_change(&mut state, 8192);
 
@@ -128,9 +128,9 @@ fn test_compose_from_settings_and_state() {
     };
     let mut state = State {
         prev_duration_ms: 0,
-        sequence_id: 255,
-        logical_volume_id: 2048,
-        prev_logical_volume_id: 4096,
+        sequence: 255,
+        logical_volume: 2048,
+        prev_logical_volume: 4096,
     };
 
     let duration_ms = 0;
@@ -149,9 +149,9 @@ fn test_compose_from_settings_and_state() {
     // fail out
     let mut state = State {
         prev_duration_ms: 0,
-        sequence_id: 1023,
-        logical_volume_id: 4095,
-        prev_logical_volume_id: 0,
+        sequence: 1023,
+        logical_volume: 4095,
+        prev_logical_volume: 0,
     };
 
     let snowprint = compose_from_settings_and_state(&settings, &mut state, duration_ms);
@@ -161,9 +161,9 @@ fn test_compose_from_settings_and_state() {
     let duration_ms = 1;
     let mut state = State {
         prev_duration_ms: 0,
-        sequence_id: 1023,
-        logical_volume_id: 4095,
-        prev_logical_volume_id: 0,
+        sequence: 1023,
+        logical_volume: 4095,
+        prev_logical_volume: 0,
     };
 
     let snowprint = compose_from_settings_and_state(&settings, &mut state, duration_ms);

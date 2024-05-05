@@ -9,7 +9,7 @@ To create a `snowprint` use the `compose` function.
 ```rust
 use snowprints::compose;
 
-let snowprint = compose(duration_ms, logical_volume_id, sequence_id);
+let snowprint = compose(duration_ms, logical_volume, sequence);
 ```
 
 To get values from a `snowprint` use the `decompose` function.
@@ -17,7 +17,7 @@ To get values from a `snowprint` use the `decompose` function.
 ```rust
 use snowprints::decompose;
 
-let (timestamp_ms, logical_volume_id, sequence_id) = decompose(snowprint);
+let (timestamp_ms, logical_volume, sequence) = decompose(snowprint);
 ```
 
 ## Snowprint generation
@@ -46,7 +46,7 @@ let settings = Settings {
 
 let mut snowprinter = match Snowprint::new(settings) {
     Ok(snow) => snow,
-    Err(err) => return println!("settings might be bad: {}", err.to_string()),
+    Err(err) => return println!("Settings did not pass check!\n{}", err.to_string()),
 };
 ```
 
@@ -57,19 +57,19 @@ use snowprints::decompose;
 
 let snowprint = match snowprinter.compose() {
     Ok(sp) => sp,
-    Err(err) => return println!("ran out of sequences and ids!: {}", err.to_string()),
+    Err(err) => return println!("Exceeded all available logical volumes and sequences!\n{}", err.to_string()),
 };
 
-let (timestamp_ms, logical_volume_id, sequence_id) = decompose(snowprint);
+let (timestamp_ms, logical_volume, sequence) = decompose(snowprint);
 ```
 
 ## What is a snowprint?
 
-A snowprint is an alternative to unique id generation patterns like `snowflakes`.
+A snowprint is an alternative to unique id generation patterns like [snowflake ids](https://en.wikipedia.org/wiki/Snowflake_ID).
 A `snowprint` is defined by bitshifting the following values into a 64bit unsigned integer:
-- 41bit `ms duration` since an arbitrary date in millseconds
-- 13bit `logical_volume` between `0-8191`
-- 10bit `sequence` between `0-1023`.
+- 41 bits `duration` since an arbitrary date in millseconds
+- 13 bits `logical_volume` between `0-8191`
+- 10 bits `sequence` between `0-1023`.
 
 ## License
 
