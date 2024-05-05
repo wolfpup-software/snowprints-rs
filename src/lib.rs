@@ -73,7 +73,7 @@ impl Snowprint {
             self.settings.origin_system_time,
             self.state.prev_duration_ms,
         );
-        compose_snowprint_from_settings_and_state(&self.settings, &mut self.state, duration_ms)
+        compose_snowprint_from_settings_and_state(&mut self.state, &self.settings, duration_ms)
     }
 }
 
@@ -93,7 +93,7 @@ pub fn decompose_snowprint(snowprint: u64) -> (u64, u64, u64) {
 }
 
 fn check_settings(settings: &Settings) -> Result<(), Error> {
-    if settings.logical_volume_modulo == 1 {
+    if settings.logical_volume_modulo == 0 {
         return Err(Error::LogicalVolumeModuloIsZero);
     }
     if (settings.logical_volume_base + settings.logical_volume_modulo) > MAX_LOGICAL_VOLUMES {
@@ -119,8 +119,8 @@ fn get_most_recent_duration_ms(origin_system_time: SystemTime, prev_duration_ms:
 }
 
 fn compose_snowprint_from_settings_and_state(
-    settings: &Settings,
     state: &mut State,
+    settings: &Settings,
     duration_ms: u64,
 ) -> Result<u64, Error> {
     match state.prev_duration_ms < duration_ms {

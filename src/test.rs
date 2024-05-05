@@ -138,7 +138,7 @@ fn test_compose_snowprint_from_settings_and_state() {
     };
 
     let duration_ms = 0;
-    let snowprint = compose_snowprint_from_settings_and_state(&settings, &mut state, duration_ms);
+    let snowprint = compose_snowprint_from_settings_and_state(&mut state, &settings, duration_ms);
     match snowprint {
         Ok(sp) => {
             let (timestamp, logical_volume, sequence) = decompose_snowprint(sp);
@@ -158,7 +158,7 @@ fn test_compose_snowprint_from_settings_and_state() {
         prev_logical_volume_id: 0,
     };
 
-    let snowprint = compose_snowprint_from_settings_and_state(&settings, &mut state, duration_ms);
+    let snowprint = compose_snowprint_from_settings_and_state(&mut state, &settings, duration_ms);
     assert_eq!(Err(Error::ExceededAvailableSequences), snowprint);
 
     // time changed
@@ -170,7 +170,7 @@ fn test_compose_snowprint_from_settings_and_state() {
         prev_logical_volume_id: 0,
     };
 
-    let snowprint = compose_snowprint_from_settings_and_state(&settings, &mut state, duration_ms);
+    let snowprint = compose_snowprint_from_settings_and_state(&mut state, &settings, duration_ms);
     match snowprint {
         Ok(sp) => {
             let (timestamp, logical_volume, sequence) = decompose_snowprint(sp);
