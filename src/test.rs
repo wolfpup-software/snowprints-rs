@@ -44,19 +44,14 @@ fn test_modify_state_time_changed() {
         logical_volume: 0,
         prev_logical_volume: 0,
     };
-
-    modify_state_time_changed(&mut state, 8192, 5);
-
     let expected_state = State {
         prev_duration_ms: 5,
         sequence: 0,
         logical_volume: 1,
         prev_logical_volume: 0,
     };
-
+    modify_state_time_changed(&mut state, 8192, 5);
     assert_eq!(expected_state, state);
-
-    modify_state_time_changed(&mut state, 8192, 6);
 
     let expected_state = State {
         prev_duration_ms: 6,
@@ -64,7 +59,7 @@ fn test_modify_state_time_changed() {
         logical_volume: 2,
         prev_logical_volume: 1,
     };
-
+    modify_state_time_changed(&mut state, 8192, 6);
     assert_eq!(expected_state, state);
 }
 
@@ -114,7 +109,6 @@ fn test_modify_state_time_did_not_change() {
         prev_logical_volume: 0,
     };
     let result = modify_state_time_did_not_change(&mut state, 8192);
-
     assert_eq!(Err(Error::ExceededAvailableSequences), result);
 }
 
@@ -138,7 +132,6 @@ fn test_compose_from_settings_and_state() {
     match snowprint {
         Ok(sp) => {
             let (_timestamp, logical_volume, sequence) = decompose(sp);
-
             assert_eq!(logical_volume, 6144);
             assert_eq!(sequence, 256);
         }
@@ -170,7 +163,6 @@ fn test_compose_from_settings_and_state() {
     match snowprint {
         Ok(sp) => {
             let (_timestamp, logical_volume, sequence) = decompose(sp);
-
             assert_eq!(logical_volume, 4096);
             assert_eq!(sequence, 0);
         }

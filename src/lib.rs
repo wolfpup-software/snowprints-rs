@@ -18,11 +18,27 @@ const LOGICAL_VOLUME_BIT_LEN: u64 = 13;
 const LOGICAL_VOLUME_BIT_MASK: u64 = ((1 << LOGICAL_VOLUME_BIT_LEN) - 1) << SEQUENCE_BIT_LEN;
 const MAX_LOGICAL_VOLUMES: u64 = u32::pow(2, LOGICAL_VOLUME_BIT_LEN as u32) as u64;
 
+// core functionality of snowprints
+pub fn compose(ms_timestamp: u64, logical_volume: u64, ticket_id: u64) -> u64 {
+    ms_timestamp << (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN)
+        | logical_volume << SEQUENCE_BIT_LEN
+        | ticket_id
+}
+
+pub fn decompose(snowprint: u64) -> (u64, u64, u64) {
+    let time = snowprint >> (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN);
+    let logical_volume = (snowprint & LOGICAL_VOLUME_BIT_MASK) >> SEQUENCE_BIT_LEN;
+    let ticket_id = snowprint & SEQUENCE_BIT_MASK;
+
+    (time, logical_volume, ticket_id)
+}
+
+// utility for rotating logical volumes and sequences
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
     LogicalVolumeModuloIsZero,
     ExceededAvailableLogicalVolumes,
-    FailedToParseOriginDuration,
+    FailedToParseOriginSystemTime,
     ExceededAvailableSequences,
 }
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -54,7 +70,7 @@ impl Snowprint {
 
         let duration_ms = match SystemTime::now().duration_since(settings.origin_system_time) {
             Ok(duration) => duration.as_millis() as u64,
-            _ => return Err(Error::FailedToParseOriginDuration),
+            _ => return Err(Error::FailedToParseOriginSystemTime),
         };
 
         Ok(Snowprint {
@@ -77,26 +93,11 @@ impl Snowprint {
     }
 }
 
-// at it's core this is a snowprint
-pub fn compose(ms_timestamp: u64, logical_volume: u64, ticket_id: u64) -> u64 {
-    ms_timestamp << (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN)
-        | logical_volume << SEQUENCE_BIT_LEN
-        | ticket_id
-}
-
-pub fn decompose(snowprint: u64) -> (u64, u64, u64) {
-    let time = snowprint >> (LOGICAL_VOLUME_BIT_LEN + SEQUENCE_BIT_LEN);
-    let logical_volume = (snowprint & LOGICAL_VOLUME_BIT_MASK) >> SEQUENCE_BIT_LEN;
-    let ticket_id = snowprint & SEQUENCE_BIT_MASK;
-
-    (time, logical_volume, ticket_id)
-}
-
 fn check_settings(settings: &Settings) -> Result<(), Error> {
     if settings.logical_volume_modulo == 0 {
         return Err(Error::LogicalVolumeModuloIsZero);
     }
-    if (settings.logical_volume_base + settings.logical_volume_modulo) > MAX_LOGICAL_VOLUMES {
+    if MAX_LOGICAL_VOLUMES < (settings.logical_volume_base + settings.logical_volume_modulo) {
         return Err(Error::ExceededAvailableLogicalVolumes);
     }
 
@@ -145,7 +146,12 @@ fn modify_state_time_changed(state: &mut State, logical_volume_modulo: u64, dura
     state.prev_duration_ms = duration_ms;
     state.sequence = 0;
     state.prev_logical_volume = state.logical_volume;
-    state.logical_volume = (state.logical_volume + 1) % logical_volume_modulo;
+    state.logical_volume += 1;
+    if state.logical_volume < logical_volume_modulo {
+        return;
+    };
+
+    state.logical_volume = 0;
 }
 
 fn modify_state_time_did_not_change(
@@ -153,15 +159,21 @@ fn modify_state_time_did_not_change(
     logical_volume_modulo: u64,
 ) -> Result<(), Error> {
     state.sequence += 1;
-    if state.sequence > MAX_SEQUENCES - 1 {
-        let next_logical_volume = (state.logical_volume + 1) % logical_volume_modulo;
-        // cycled through all sequences on all available logical shards
-        if next_logical_volume == state.prev_logical_volume {
-            return Err(Error::ExceededAvailableSequences);
-        }
-        // move to next shard
-        state.sequence = 0;
-        state.logical_volume = next_logical_volume;
+    if state.sequence < MAX_SEQUENCES {
+        return Ok(());
     }
+
+    let mut next_logical_volume = state.logical_volume + 1;
+    if next_logical_volume > logical_volume_modulo - 1 {
+        next_logical_volume = 0;
+    };
+    // cycled through all sequences on all available logical shards
+    if state.prev_logical_volume == next_logical_volume {
+        return Err(Error::ExceededAvailableSequences);
+    }
+
+    // move to next shard
+    state.sequence = 0;
+    state.logical_volume = next_logical_volume;
     Ok(())
 }
