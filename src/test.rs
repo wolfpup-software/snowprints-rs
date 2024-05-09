@@ -6,7 +6,7 @@ fn test_check_failed_settings() {
     let mod_fail_settings = Settings {
         origin_system_time: SystemTime::now(),
         logical_volume_base: 4096,
-        logical_volume_modulo: 0,
+        logical_volume_length: 0,
     };
     let snowprinter = Snowprint::new(mod_fail_settings);
     assert_eq!(snowprinter, Err(Error::LogicalVolumeModuloIsZero));
@@ -14,7 +14,7 @@ fn test_check_failed_settings() {
     let exceed_fail_settings = Settings {
         origin_system_time: SystemTime::now(),
         logical_volume_base: 4096,
-        logical_volume_modulo: 8192,
+        logical_volume_length: 8192,
     };
     let snowprinter2 = Snowprint::new(exceed_fail_settings);
     assert_eq!(snowprinter2, Err(Error::ExceededAvailableLogicalVolumes));
@@ -118,7 +118,7 @@ fn test_compose_from_settings_and_state() {
     let settings = Settings {
         origin_system_time: SystemTime::now(),
         logical_volume_base: 4096,
-        logical_volume_modulo: 4096,
+        logical_volume_length: 4096,
     };
     let mut state = State {
         prev_duration_ms: 0,

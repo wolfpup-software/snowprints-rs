@@ -32,11 +32,9 @@ The `logical_volume_base` property defines where to begin logical volume rotatio
 
 To rotate through logical volumes `1024-2047`, set `logical_volume_base` to `1024` and `logical_volume_length` to `1024`.
 
-In the example below, a `Snowprint` called `snowprinter` will track milliseconds since `2024 Jan 1st` and rotate through logical volumes `0-8191`.
-
 ```rust
 use std::time::Duration;
-use snowprints::{Settings, Snowprint};
+use snowprints::Settings;
 
 let settings = Settings {
     origin_system_time: UNIX_EPOCH + Duration::from_millis(EPOCH_2024_01_01_AS_MS),
@@ -44,24 +42,28 @@ let settings = Settings {
     logical_volume_length: 8192,
 };
 
-let mut snowprinter = match Snowprint::new(settings) {
-    Ok(snow) => snow,
-    Err(err) => return println!("Settings did not pass check!\n{}", err.to_string()),
-};
 ```
 
-The function `snowprinter.compose()` will only error when available `logical_volumes` and `sequences` have been exhausted for the current `millisecond`.
+In the example below, a `Snowprint` called `snowprinter` will track milliseconds since `2024 Jan 1st` and rotate through logical volumes `0-8191`.
 
 ```rust
+use snowprints::Snowprint;
 use snowprints::decompose;
+
+let mut snowprinter = match Snowprint::new(settings) {
+    Ok(snow) => snow,
+    _ => return println!("Settings are not valid!"),
+};
 
 let snowprint = match snowprinter.compose() {
     Ok(sp) => sp,
-    Err(err) => return println!("Exceeded all available logical volumes and sequences!\n{}", err.to_string()),
+    _ => return println!("Consumed all available logical volumes and sequences!"),
 };
 
 let (timestamp_ms, logical_volume, sequence) = decompose(snowprint);
 ```
+
+The function `snowprinter.compose()` will only error when available `logical_volumes` and `sequences` have been exhausted for the current `millisecond`.
 
 ## What is a snowprint?
 
@@ -71,6 +73,20 @@ A `snowprint` is defined by bitshifting the following values into a 64bit unsign
 - 13 bits `logical_volume` between `0-8191`
 - 10 bits `sequence` between `0-1023`.
 
+## Why can't I choose my own bit lengths?
+
+A `snowprint` is a unique identifier meant to last up to `41 years`. If bit lengths are available as an API, a developer will inevitably change them and cause immensea and incalculable pain for whatever unlucky system in that 41 year time period.
+
+The ids will most likely outlive the code, organization, or even the author that generated them.
+
+If a custom set of bit lengths are neccessary, fork this repo and change the following values:
+
+```rust
+// ./src/lib.rs
+const SEQUENCE_BIT_LEN: u64 = 10;
+const LOGICAL_VOLUME_BIT_LEN: u64 = 13;
+```
+
 ## License
 
-`Snowprint` is released under the BSD 3-Clause License
+`Snowprints` is released under the BSD 3-Clause License
