@@ -44,8 +44,8 @@ pub enum Error {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Settings {
     pub origin_system_time: SystemTime,
-    pub logical_volume_modulo: u64,
     pub logical_volume_base: u64,
+    pub logical_volume_length: u64,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -94,10 +94,10 @@ impl Snowprint {
 }
 
 fn check_settings(settings: &Settings) -> Result<(), Error> {
-    if settings.logical_volume_modulo == 0 {
+    if settings.logical_volume_length == 0 {
         return Err(Error::LogicalVolumeModuloIsZero);
     }
-    if MAX_LOGICAL_VOLUMES < (settings.logical_volume_base + settings.logical_volume_modulo) {
+    if MAX_LOGICAL_VOLUMES < (settings.logical_volume_base + settings.logical_volume_length) {
         return Err(Error::ExceededAvailableLogicalVolumes);
     }
 
@@ -125,10 +125,10 @@ fn compose_from_settings_and_state(
     duration_ms: u64,
 ) -> Result<u64, Error> {
     match state.prev_duration_ms < duration_ms {
-        true => modify_state_time_changed(state, settings.logical_volume_modulo, duration_ms),
+        true => modify_state_time_changed(state, settings.logical_volume_length, duration_ms),
         _ => {
             if let Err(err) =
-                modify_state_time_did_not_change(state, settings.logical_volume_modulo)
+                modify_state_time_did_not_change(state, settings.logical_volume_length)
             {
                 return Err(err);
             };
@@ -142,12 +142,12 @@ fn compose_from_settings_and_state(
     ))
 }
 
-fn modify_state_time_changed(state: &mut State, logical_volume_modulo: u64, duration_ms: u64) {
+fn modify_state_time_changed(state: &mut State, logical_volume_length: u64, duration_ms: u64) {
     state.prev_duration_ms = duration_ms;
     state.sequence = 0;
     state.prev_logical_volume = state.logical_volume;
     state.logical_volume += 1;
-    if state.logical_volume < logical_volume_modulo {
+    if state.logical_volume < logical_volume_length {
         return;
     };
 
@@ -156,7 +156,7 @@ fn modify_state_time_changed(state: &mut State, logical_volume_modulo: u64, dura
 
 fn modify_state_time_did_not_change(
     state: &mut State,
-    logical_volume_modulo: u64,
+    logical_volume_length: u64,
 ) -> Result<(), Error> {
     state.sequence += 1;
     if state.sequence < MAX_SEQUENCES {
@@ -164,7 +164,7 @@ fn modify_state_time_did_not_change(
     }
 
     let mut next_logical_volume = state.logical_volume + 1;
-    if next_logical_volume > logical_volume_modulo - 1 {
+    if next_logical_volume > logical_volume_length - 1 {
         next_logical_volume = 0;
     };
     // cycled through all sequences on all available logical shards

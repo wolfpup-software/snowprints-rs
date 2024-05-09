@@ -28,9 +28,9 @@ For a predefined way to cycle through a series of `logical_volumes` and `sequenc
 
 First, define a `Settings` struct.
 
-The `logical_volume_base` property defines where to begin logical volume rotations. The `logical_volume_modulo` property defines how many logical volumes will be rotated.
+The `logical_volume_base` property defines where to begin logical volume rotations. The `logical_volume_length` property defines how many logical volumes will be rotated.
 
-So to rotate through logical volumes `1024-2047` set `logical_volume_base` to `1024` and `logical_volume_modulo` to `1024`.
+To rotate through logical volumes `1024-2047`, set `logical_volume_base` to `1024` and `logical_volume_length` to `1024`.
 
 In the example below, a `Snowprint` called `snowprinter` will track milliseconds since `2024 Jan 1st` and rotate through logical volumes `0-8191`.
 
@@ -41,7 +41,7 @@ use snowprints::{Settings, Snowprint};
 let settings = Settings {
     origin_system_time: UNIX_EPOCH + Duration::from_millis(EPOCH_2024_01_01_AS_MS),
     logical_volume_base: 0,
-    logical_volume_modulo: 8192,
+    logical_volume_length: 8192,
 };
 
 let mut snowprinter = match Snowprint::new(settings) {
