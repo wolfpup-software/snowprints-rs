@@ -1,6 +1,15 @@
 # snowprints-rs
 
-Create unique, sortable ids.
+Create unique and sortable ids.
+
+## What is a snowprint?
+
+A snowprint unique id generation pattern defined by bitshifting the following values into a 64bit unsigned integer:
+- 41 bit `duration` since an arbitrary date in millseconds
+- 13 bit `logical_volume` between `0-8191`
+- 10 bit `sequence` between `0-1023`.
+
+`snowprint` is based rougly on this [article](https://instagram-engineering.com/sharding-ids-at-instagram-1cf5a71e5a5c).
 
 ## How to use
 
@@ -44,6 +53,8 @@ let settings = Settings {
 
 ```
 
+### Compose snowprints
+
 In the example below, a `Snowprint` called `snowprinter` will track milliseconds since `2024 Jan 1st` and rotate through logical volumes `0-8191`.
 
 ```rust
@@ -65,19 +76,11 @@ let (timestamp_ms, logical_volume, sequence) = decompose(snowprint);
 
 The function `snowprinter.compose()` will only error when available `logical_volumes` and `sequences` have been exhausted for the current `millisecond`.
 
-## What is a snowprint?
-
-A snowprint is an alternative to unique id generation patterns like [snowflake ids](https://en.wikipedia.org/wiki/Snowflake_ID).
-A `snowprint` is defined by bitshifting the following values into a 64bit unsigned integer:
-- 41 bits `duration` since an arbitrary date in millseconds
-- 13 bits `logical_volume` between `0-8191`
-- 10 bits `sequence` between `0-1023`.
-
 ## Why can't I choose my own bit lengths?
 
-A `snowprint` is a unique identifier meant to last up to `41 years`. If bit lengths are available as an API, a developer will inevitably change them and cause immensea and incalculable pain for whatever unlucky system in that 41 year time period.
+A `snowprint` is a unique identifier meant to last up to `41 years`. The ids will most likely outlive the code, organization, or even the author that generated them.
 
-The ids will most likely outlive the code, organization, or even the author that generated them.
+If bit lengths are available as an API, a developer will inevitably change them and cause immense and incalculable pain for whatever unlucky system in that 41 year time period.
 
 If a custom set of bit lengths are neccessary, fork this repo and change the following values:
 
