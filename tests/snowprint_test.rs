@@ -36,7 +36,7 @@ fn snowprint_struct_builds_and_returns_snowprint() {
     let settings = Settings {
         origin_system_time: UNIX_EPOCH + JANUARY_1ST_2024_AS_DURATION,
         logical_volume_base: 0,
-        logical_volume_modulo: 8192,
+        logical_volume_length: 8192,
     };
 
     let mut builder = match Snowprint::new(settings) {
@@ -57,6 +57,3 @@ fn snowprint_struct_builds_and_returns_snowprint() {
         Err(err) => assert_eq!(Error::ExceededAvailableLogicalVolumes, err),
     }
 }
-
-// test starting logical volumes from zero
-// test last possible logical volume sequence
