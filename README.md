@@ -34,7 +34,7 @@ const JANUARY_1ST_2024_AS_MS: u64 = 1704096000000;
 let params = Params {
     origin_time_ms: JANUARY_1ST_2024_AS_MS,
     logical_volume_base: 0,
-    logical_volume_length: 8192,
+    logical_volume_length: 4095,
 };
 ```
 
