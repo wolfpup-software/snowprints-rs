@@ -58,3 +58,22 @@ fn snowprint_struct_builds_and_returns_snowprint() {
         Err(err) => assert_eq!(Errors::ExceededAvailableLogicalVolumes, err),
     }
 }
+
+#[test]
+fn test_check_failed_settings() {
+    let mod_fail_settings = Params {
+        origin_time_ms: 0,
+        logical_volume_base: 2048,
+        logical_volume_length: 0,
+    };
+    let snowprinter = Snowprints::from(mod_fail_settings);
+    assert_eq!(snowprinter, Err(Errors::LogicalVolumeModuloIsZero));
+
+    let exceed_fail_settings = Params {
+        origin_time_ms: 0,
+        logical_volume_base: 2048,
+        logical_volume_length: 2049,
+    };
+    let snowprinter2 = Snowprints::from(exceed_fail_settings);
+    assert_eq!(snowprinter2, Err(Errors::ExceededAvailableLogicalVolumes));
+}

@@ -1,6 +1,6 @@
 # Snowprints-rs
 
-Distribute snowflake ids across available logical volumes.
+An i64-based SQL-sortable snowflake id generator that distributes ids across logical volumes.
 
 [![Tests](https://github.com/w-lfpup/snowprints-rs/actions/workflows/tests.yml/badge.svg)](https://github.com/w-lfpup/snowprints-rs/actions/workflows/tests.yml)
 
@@ -9,7 +9,7 @@ Distribute snowflake ids across available logical volumes.
 ### Install
 
 Snowprints-rs is available on [crates.io](https://crates.io/crates/snowprints/)
-
+snowflake
 ```sh
 cargo add snowprints
 ```
