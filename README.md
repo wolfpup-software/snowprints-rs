@@ -46,7 +46,7 @@ let params = Params {
 
 ### API
 
-In the example below, `Snowprints` start on `2024 Jan 1st` and rotate through logical volumes `0-8191`.
+In the example below, `Snowprints` start on `2024 Jan 1st` and rotate through logical volumes `0-4095`.
 
 ```rust
 use snowprints::Snowprints;
