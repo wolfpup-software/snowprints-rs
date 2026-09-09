@@ -4,7 +4,7 @@ version = "0.2.1"
 edition = "2024"
 
 categories = ["data-structures", "network-programming"]
-description = "Generate sortable shardarble snowflake IDs across available logical volumes"  
+description = "Generate SQL-sortable shardable snowflake IDs"  
 keywords = ["UUID", "snowflake", "id", "distributed", "systems", "64bit", "i64"]
 license = "BSD-3-Clause"
 readme = "README.md"
