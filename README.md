@@ -19,6 +19,12 @@ Or install directly from github:
 cargo add --git https://github.com/w-lfpup/snowprints-rs
 ```
 
+Include serde support with the feature `serde`:
+
+```sh
+cargo add snowprints --features serde
+```
+
 ### Params
 
 Define a `Params` struct.
