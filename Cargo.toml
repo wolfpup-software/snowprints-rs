@@ -1,11 +1,11 @@
 [package]
 name = "snowprints"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 
 categories = ["data-structures", "network-programming"]
-description = "Generate snowflake IDs across logical volumes"  
-keywords = ["UUID", "snowflake", "distributed", "systems", "64bit"]
+description = "Generate sortable shardarble snowflake IDs across available logical volumes"  
+keywords = ["UUID", "snowflake", "id", "distributed", "systems", "64bit", "u64"]
 license = "BSD-3-Clause"
 readme = "README.md"
 repository = "https://github.com/w-lfpup/snowprints-rs"
